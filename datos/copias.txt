@@ -1,0 +1,5 @@
+C3;Cards A.H.;Bueno;Prestamo;true
+C4;UNO Attack;Nuevo;Prestamo;true
+C5;Catan;Nuevo;Prestamo;true
+C1;Catan;Nuevo;Prestamo;false
+C2;Twilight Imperium;Bueno;Prestamo;false

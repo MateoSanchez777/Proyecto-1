@@ -14,4 +14,10 @@ public abstract class Empleado extends UsuarioComprador {
     public String getCodigoDescuento() { return codigoDescuento; }
     public Turno getTurno() { return turno; }
     public void setTurno(Turno turno) { this.turno = turno; }
+    
+    public boolean estaEnTurno() {
+        return turno != null;
+    }
 }
+
+

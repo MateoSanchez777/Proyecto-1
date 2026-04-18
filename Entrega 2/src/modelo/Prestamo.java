@@ -29,7 +29,19 @@ public class Prestamo {
     public String getFechaDevolucion() { return fechaDevolucion; }
     public Mesero getMeseroIntroductor() { return meseroIntroductor; }
 
-    public void finalizarPrestamo(String fechaDevolucion) {
+    public void finalizarPrestamo(String fechaDevolucion) throws Exception {
+        if (this.fechaDevolucion != null) {
+            throw new Exception("El prestamo ya fue finalizado.");
+        }
+
         this.fechaDevolucion = fechaDevolucion;
+
+        for (Copia copia : copiasPrestadas) {
+            copia.setDisponible(true);
+            usuario.removerPrestamo(copia);
+        }
     }
+
 }
+    
+    

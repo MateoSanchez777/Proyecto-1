@@ -61,5 +61,62 @@ public class PruebaPrestamo {
             cafe.realizarPrestamo(usr1, mesa1, pedirDificil, m1);
             System.out.println("OK: Prestamo concedido pero el sistema emite advertencia.");
         } catch (Exception e) { System.out.println(e.getMessage()); }
+        
+
+
+        
+        
+        
+        System.out.println("\n5. Empleado en turno intentando pedir prestamo:");
+
+        Mesero meseroTurno = new Mesero("m2", "123", "M456");
+        meseroTurno.setTurno(new modelo.turnos.Turno("Lunes", "Mañana"));
+
+        cafe.registrarUsuario(meseroTurno);
+
+        // nueva copia para que evitemos el conflicto de ya cread
+        Copia c5 = new Copia("C5", j1, "Nuevo", "Prestamo", true);
+        cafe.agregarCopia(c5);
+
+        List<Copia> pedirEmpleado = new ArrayList<>();
+        pedirEmpleado.add(c5);
+
+        try {
+            cafe.realizarPrestamo(meseroTurno, mesa1, pedirEmpleado, null);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        
+        usr1.getPrestamosActuales().clear();
+        
+        System.out.println("\n6. Prestamo de juego de accion:");
+
+        Juego juegoAccion = new Juego("UNO Attack", "Mattel", 2019, 2, 6, 6, "Accion", false, 30000);
+        Copia copiaAccion = new Copia("C4", juegoAccion, "Nuevo", "Prestamo", true);
+
+        cafe.agregarCopia(copiaAccion);
+
+        List<Copia> pedirAccion = new ArrayList<>();
+        pedirAccion.add(copiaAccion);
+
+        try {
+            cafe.realizarPrestamo(usr1, mesa1, pedirAccion, null);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        
+        
+        System.out.println("\n7. Guardando datos:");
+        cafe.guardarDatos();
+        System.out.println("Datos guardados correctamente.");
+        
+        
     }
+    
+    
 }
+
+
+
+	
+

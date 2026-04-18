@@ -63,6 +63,25 @@ public class BoardGameCafe {
                            c.getInventario() + ";" + c.isDisponible());
             }
         } catch (Exception e) { e.printStackTrace(); }
+        
+        try (PrintWriter pw = new PrintWriter(new File(dir, "ventas.txt"))) {
+            for (Venta v : ventas) {
+                pw.println(v.getFecha() + ";" + v.getTotalFinal());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        
+        try (PrintWriter pw = new PrintWriter(new File(dir, "prestamos.txt"))) {
+            for (Prestamo p : prestamos) {
+                pw.println(p.getFechaPrestamo() + ";" + p.getFechaDevolucion());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        
     }
 
     public void cargarDatos() throws Exception {
@@ -117,10 +136,11 @@ public class BoardGameCafe {
             }
             br.close();
         }
+        
     }
 
     // --------------------------------------------------------
-    // MÉTODOS DE NEGOCIO (LOGICA PRINCIPAL)
+    // ACÁ METEMOS MÉTODOS DE NEGOCIO (LOGICA PRINCIPAL)
     // --------------------------------------------------------
 
     public Map<String, Usuario> getUsuarios() { return usuarios; }
@@ -135,10 +155,12 @@ public class BoardGameCafe {
     public void agregarProductoMenu(ProductoCafeteria p) { productosMenu.put(p.getNombre(), p); }
 
     public void realizarPrestamo(UsuarioComprador usuario, Mesa mesa, List<Copia> copiasPedidas, Mesero meseroAcompaniante) throws Exception {
-        if (usuario instanceof Empleado) {
-            // Empleado no necesita mesa. O si esta en turno laboral no deberia pedir (simplificado aqui).
-        }
-
+    	if (usuario instanceof Empleado) {
+    	    Empleado emp = (Empleado) usuario;
+    	    if (emp.estaEnTurno()) {
+    	        throw new Exception("Un empleado en turno no puede solicitar prestamos.");
+    	    }
+    	}
         if (usuario.getPrestamosActuales().size() + copiasPedidas.size() > 2) {
             throw new Exception("ERROR: Un cliente no puede tener mas de 2 juegos prestados a la vez.");
         }
@@ -147,9 +169,15 @@ public class BoardGameCafe {
 
         for (Copia c : copiasPedidas) {
             Juego j = c.getJuego();
+
+            if (j.getCategoria().equals("Accion")) {
+                tieneJuegoAccion = true;
+            }
+
             if (!c.isDisponible() || !c.getInventario().equals("Prestamo")) {
                 throw new Exception("ERROR: La copia " + c.getId() + " no esta disponible para prestamo.");
             }
+
             if (mesa != null) {
                 if (mesa.getNumPersonas() < j.getMinJugadores() || mesa.getNumPersonas() > j.getMaxJugadores()) {
                     throw new Exception("ERROR: Restriccion de numero de jugadores para " + j.getNombre());
@@ -161,8 +189,7 @@ public class BoardGameCafe {
                     throw new Exception("ERROR: Juego no apto para menores de 5 años.");
                 }
             }
-            if (j.getCategoria().equals("Accion")) tieneJuegoAccion = true;
-            
+
             if (j.isEsDificil()) {
                 if (meseroAcompaniante == null) {
                     System.out.println("ADVERTENCIA: Han pedido un juego dificil sin mesero introductor.");
@@ -172,6 +199,11 @@ public class BoardGameCafe {
             }
         }
 
+        if (tieneJuegoAccion && mesa != null) {
+            throw new Exception("No se puede prestar juego de accion con bebidas calientes en la mesa.");
+        }
+        
+        
         // Bloqueo adicional por bebida caliente si es accion y ya pidieron bebida. (Verificable a nivel de compras conjuntas).
 
         Prestamo p = new Prestamo(copiasPedidas, usuario, mesa, new java.util.Date().toString(), meseroAcompaniante);
@@ -246,8 +278,14 @@ public class BoardGameCafe {
     }
     
     public void cambiarTurno(SolicitudCambioTurno solicitud, Administrador admin) throws Exception {
-        // Logica simplificada: el admin siempre aprueba si cumple minimos (minimo 1 cocinero, 2 meseros - aunque habria que contar totales).
+
+        // Creamos una validación antes de todo
+        if (!cumpleMinimoPersonal()) {
+            throw new Exception("No se puede aprobar el cambio de turno. No se cumple el minimo de empleados.");
+        }
+
         solicitud.aprobar();
+
         if (solicitud.getReemplazo() != null) {
             Turno temp = solicitud.getSolicitante().getTurno();
             solicitud.getSolicitante().setTurno(solicitud.getReemplazo().getTurno());
@@ -256,4 +294,17 @@ public class BoardGameCafe {
     }
 
     public List<Venta> getVentas() { return ventas; }
+    
+    
+    private boolean cumpleMinimoPersonal() {
+        int cocineros = 0;
+        int meseros = 0;
+
+        for (Usuario u : usuarios.values()) {
+            if (u instanceof Cocinero) cocineros++;
+            if (u instanceof Mesero) meseros++;
+        }
+
+        return cocineros >= 1 && meseros >= 2;
+    }
 }
