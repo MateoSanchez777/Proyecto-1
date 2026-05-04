@@ -10,12 +10,22 @@ public abstract class UsuarioComprador extends Usuario {
     protected List<Juego> juegosFavoritos;
     protected List<Copia> prestamosActuales;
     protected List<Venta> comprasGlobales;
+    protected List<Double> bonosDescuento;
 
     public UsuarioComprador(String login, String password) {
         super(login, password);
         this.juegosFavoritos = new ArrayList<>();
         this.prestamosActuales = new ArrayList<>();
         this.comprasGlobales = new ArrayList<>();
+        this.bonosDescuento = new ArrayList<>();
+    }
+
+    public void agregarBonoDescuento(double bono) {
+        bonosDescuento.add(bono);
+    }
+    
+    public List<Double> getBonosDescuento() {
+        return bonosDescuento;
     }
 
     public void agregarJuegoFavorito(Juego juego) {

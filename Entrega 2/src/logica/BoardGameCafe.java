@@ -15,6 +15,12 @@ import modelo.turnos.SolicitudCambioTurno;
 import modelo.usuarios.*;
 import modelo.ventas.ItemVenta;
 import modelo.ventas.Venta;
+import modelo.torneos.Torneo;
+import modelo.torneos.TorneoAmistoso;
+import modelo.torneos.TorneoCompetitivo;
+import modelo.torneos.Inscripcion;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class BoardGameCafe {
     private Map<String, Usuario> usuarios;
@@ -24,6 +30,7 @@ public class BoardGameCafe {
     private List<Prestamo> prestamos;
     private List<Venta> ventas;
     private List<SolicitudCambioTurno> solicitudesTurno;
+    private List<Torneo> torneos;
 
     public BoardGameCafe() {
         usuarios = new HashMap<>();
@@ -33,6 +40,7 @@ public class BoardGameCafe {
         prestamos = new ArrayList<>();
         ventas = new ArrayList<>();
         solicitudesTurno = new ArrayList<>();
+        torneos = new ArrayList<>();
     }
 
     // --------------------------------------------------------
@@ -145,6 +153,8 @@ public class BoardGameCafe {
 
     public Map<String, Usuario> getUsuarios() { return usuarios; }
     public Map<String, Copia> getCopias() { return copias; }
+    public Map<String, Juego> getJuegos() { return juegos; }
+    public List<Torneo> getTorneos() { return torneos; }
 
     public void registrarUsuario(Usuario u) {
         usuarios.put(u.getLogin(), u);
@@ -153,6 +163,38 @@ public class BoardGameCafe {
     public void agregarJuego(Juego j) { juegos.put(j.getNombre(), j); }
     public void agregarCopia(Copia c) { copias.put(c.getId(), c); }
     public void agregarProductoMenu(ProductoCafeteria p) { productosMenu.put(p.getNombre(), p); }
+
+    public void crearTorneo(Torneo torneo) {
+        torneos.add(torneo);
+    }
+
+    public void inscribirEnTorneo(UsuarioComprador usuario, Torneo torneo, int cupos) throws Exception {
+        if (cupos > 3 || cupos < 1) {
+            throw new Exception("Solo se pueden inscribir entre 1 y 3 participantes por usuario.");
+        }
+        
+        if (usuario instanceof Empleado) {
+            Empleado emp = (Empleado) usuario;
+            if (emp.getTurno() != null && emp.getTurno().getDia().equalsIgnoreCase(torneo.getDiaSemana())) {
+                throw new Exception("Los empleados no pueden inscribirse a torneos si tienen turno el mismo dia.");
+            }
+        }
+        
+        boolean esFanatico = usuario.getJuegosFavoritos().contains(torneo.getJuego());
+        if (esFanatico) {
+            int fanOcupados = torneo.getCuposFanaticosOcupados();
+            if (fanOcupados + cupos > torneo.getCuposFanaticosTotal()) {
+                esFanatico = false;
+            }
+        }
+        
+        Inscripcion ins = new Inscripcion(usuario, cupos, esFanatico);
+        torneo.inscribir(ins);
+    }
+
+    public void desinscribirDeTorneo(UsuarioComprador usuario, Torneo torneo) {
+        torneo.desinscribir(usuario);
+    }
 
     public void realizarPrestamo(UsuarioComprador usuario, Mesa mesa, List<Copia> copiasPedidas, Mesero meseroAcompaniante) throws Exception {
     	if (usuario instanceof Empleado) {
@@ -306,5 +348,151 @@ public class BoardGameCafe {
         }
 
         return cocineros >= 1 && meseros >= 2;
+    }
+
+    public void guardarTorneosJSON() {
+        try {
+            File dir = new File("../datos");
+            if (!dir.exists()) dir.mkdirs();
+            
+            JSONObject root = new JSONObject();
+            
+            JSONArray arrTorneos = new JSONArray();
+            for (Torneo t : torneos) {
+                JSONObject objTorneo = new JSONObject();
+                objTorneo.put("nombre", t.getNombre());
+                objTorneo.put("juego", t.getJuego().getNombre());
+                objTorneo.put("diaSemana", t.getDiaSemana());
+                objTorneo.put("maxParticipantes", t.getMaxParticipantes());
+                
+                if (t instanceof TorneoAmistoso) {
+                    objTorneo.put("tipo", "Amistoso");
+                } else if (t instanceof TorneoCompetitivo) {
+                    objTorneo.put("tipo", "Competitivo");
+                    objTorneo.put("tarifaEntrada", ((TorneoCompetitivo) t).getTarifaEntrada());
+                }
+                
+                JSONArray arrInscripciones = new JSONArray();
+                for (Inscripcion ins : t.getInscripciones()) {
+                    JSONObject objIns = new JSONObject();
+                    objIns.put("usuario", ins.getUsuario().getLogin());
+                    objIns.put("cantidadCupos", ins.getCantidadCupos());
+                    objIns.put("esFanatico", ins.isFanatico());
+                    arrInscripciones.put(objIns);
+                }
+                objTorneo.put("inscripciones", arrInscripciones);
+                arrTorneos.put(objTorneo);
+            }
+            root.put("torneos", arrTorneos);
+            
+            JSONArray arrUsuarios = new JSONArray();
+            for (Usuario u : usuarios.values()) {
+                if (u instanceof UsuarioComprador) {
+                    UsuarioComprador uc = (UsuarioComprador) u;
+                    JSONObject objU = new JSONObject();
+                    objU.put("login", uc.getLogin());
+                    
+                    JSONArray arrJuegosFav = new JSONArray();
+                    for (Juego j : uc.getJuegosFavoritos()) {
+                        arrJuegosFav.put(j.getNombre());
+                    }
+                    objU.put("juegosFavoritos", arrJuegosFav);
+                    
+                    JSONArray arrBonos = new JSONArray();
+                    for (Double bono : uc.getBonosDescuento()) {
+                        arrBonos.put(bono);
+                    }
+                    objU.put("bonosDescuento", arrBonos);
+                    
+                    arrUsuarios.put(objU);
+                }
+            }
+            root.put("usuariosExtra", arrUsuarios);
+            
+            try (PrintWriter pw = new PrintWriter(new File(dir, "estado_nuevo.json"))) {
+                pw.write(root.toString(4));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void cargarTorneosJSON() {
+        try {
+            File f = new File("../datos/estado_nuevo.json");
+            if (!f.exists()) return;
+            
+            String content = new String(java.nio.file.Files.readAllBytes(f.toPath()));
+            JSONObject root = new JSONObject(content);
+            
+            if (root.has("usuariosExtra")) {
+                JSONArray arrUsuarios = root.getJSONArray("usuariosExtra");
+                for (int i = 0; i < arrUsuarios.length(); i++) {
+                    JSONObject objU = arrUsuarios.getJSONObject(i);
+                    String login = objU.getString("login");
+                    Usuario u = usuarios.get(login);
+                    if (u != null && u instanceof UsuarioComprador) {
+                        UsuarioComprador uc = (UsuarioComprador) u;
+                        
+                        JSONArray arrJuegosFav = objU.getJSONArray("juegosFavoritos");
+                        for (int j = 0; j < arrJuegosFav.length(); j++) {
+                            String jNombre = arrJuegosFav.getString(j);
+                            Juego juego = juegos.get(jNombre);
+                            if (juego != null) {
+                                uc.agregarJuegoFavorito(juego);
+                            }
+                        }
+                        
+                        JSONArray arrBonos = objU.getJSONArray("bonosDescuento");
+                        for (int j = 0; j < arrBonos.length(); j++) {
+                            uc.agregarBonoDescuento(arrBonos.getDouble(j));
+                        }
+                    }
+                }
+            }
+            
+            if (root.has("torneos")) {
+                JSONArray arrTorneos = root.getJSONArray("torneos");
+                for (int i = 0; i < arrTorneos.length(); i++) {
+                    JSONObject objTorneo = arrTorneos.getJSONObject(i);
+                    String nombre = objTorneo.getString("nombre");
+                    String jNombre = objTorneo.getString("juego");
+                    String diaSemana = objTorneo.getString("diaSemana");
+                    int maxParticipantes = objTorneo.getInt("maxParticipantes");
+                    String tipo = objTorneo.getString("tipo");
+                    
+                    Juego juego = juegos.get(jNombre);
+                    if (juego == null) continue;
+                    
+                    Torneo torneo = null;
+                    if (tipo.equals("Amistoso")) {
+                        torneo = new TorneoAmistoso(nombre, juego, diaSemana, maxParticipantes);
+                    } else if (tipo.equals("Competitivo")) {
+                        double tarifaEntrada = objTorneo.getDouble("tarifaEntrada");
+                        torneo = new TorneoCompetitivo(nombre, juego, diaSemana, maxParticipantes, tarifaEntrada);
+                    }
+                    
+                    if (torneo != null) {
+                        JSONArray arrInscripciones = objTorneo.getJSONArray("inscripciones");
+                        for (int j = 0; j < arrInscripciones.length(); j++) {
+                            JSONObject objIns = arrInscripciones.getJSONObject(j);
+                            String uLogin = objIns.getString("usuario");
+                            int cantidadCupos = objIns.getInt("cantidadCupos");
+                            boolean esFanatico = objIns.getBoolean("esFanatico");
+                            
+                            Usuario u = usuarios.get(uLogin);
+                            if (u != null && u instanceof UsuarioComprador) {
+                                Inscripcion ins = new Inscripcion((UsuarioComprador) u, cantidadCupos, esFanatico);
+                                torneo.inscribir(ins);
+                            }
+                        }
+                        torneos.add(torneo);
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
