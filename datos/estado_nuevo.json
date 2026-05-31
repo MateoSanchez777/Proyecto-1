@@ -1,0 +1,45 @@
+{
+    "torneos": [],
+    "usuariosExtra": [
+        {
+            "bonosDescuento": [],
+            "login": "carlos",
+            "juegosFavoritos": []
+        },
+        {
+            "bonosDescuento": [],
+            "login": "cocinero2",
+            "juegosFavoritos": []
+        },
+        {
+            "bonosDescuento": [],
+            "login": "cocinero1",
+            "juegosFavoritos": []
+        },
+        {
+            "bonosDescuento": [],
+            "login": "juan",
+            "juegosFavoritos": ["Pandemic"]
+        },
+        {
+            "bonosDescuento": [],
+            "login": "andres",
+            "juegosFavoritos": []
+        },
+        {
+            "bonosDescuento": [],
+            "login": "maria",
+            "juegosFavoritos": []
+        },
+        {
+            "bonosDescuento": [],
+            "login": "mesero1",
+            "juegosFavoritos": []
+        },
+        {
+            "bonosDescuento": [],
+            "login": "mesero2",
+            "juegosFavoritos": []
+        }
+    ]
+}

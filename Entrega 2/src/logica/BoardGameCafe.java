@@ -5,6 +5,7 @@ import java.util.*;
 
 import modelo.Mesa;
 import modelo.Prestamo;
+import modelo.Reserva;
 import modelo.cafeteria.Bebida;
 import modelo.cafeteria.Pasteleria;
 import modelo.cafeteria.ProductoCafeteria;
@@ -12,7 +13,6 @@ import modelo.juegos.Copia;
 import modelo.juegos.Juego;
 import modelo.turnos.Turno;
 import modelo.turnos.SolicitudCambioTurno;
-import modelo.Reserva;
 import modelo.usuarios.*;
 import modelo.ventas.ItemVenta;
 import modelo.ventas.Venta;
@@ -47,34 +47,27 @@ public class BoardGameCafe {
     }
 
     // --------------------------------------------------------
-    // PERSISTENCIA CORREGIDA Y COMPLETA
+    // PERSISTENCIA COMPLETA
     // --------------------------------------------------------
 
     public void guardarDatos() {
-        File dir = new File("../datos");
+        File dir = new File("datos");
         if (!dir.exists()) dir.mkdirs();
 
-        // --- usuarios.txt ---
-        // Formato: Administrador;login;pass
-        //          Cliente;login;pass;puntosFidelidad
-        //          Mesero;login;pass;codigoDescuento;diaTurno;horarioTurno
-        //          Cocinero;login;pass;codigoDescuento;diaTurno;horarioTurno
+        // usuarios.txt
         try (PrintWriter pw = new PrintWriter(new File(dir, "usuarios.txt"))) {
             for (Usuario u : usuarios.values()) {
                 if (u instanceof Administrador) {
                     pw.println("Administrador;" + u.getLogin() + ";" + u.getPassword());
-
                 } else if (u instanceof Cliente) {
                     Cliente c = (Cliente) u;
                     pw.println("Cliente;" + c.getLogin() + ";" + c.getPassword() + ";" + c.getPuntosFidelidad());
-
                 } else if (u instanceof Mesero) {
                     Mesero m = (Mesero) u;
                     String dia = (m.getTurno() != null) ? m.getTurno().getDia() : "";
                     String horario = (m.getTurno() != null) ? m.getTurno().getHorario() : "";
                     pw.println("Mesero;" + m.getLogin() + ";" + m.getPassword() + ";"
                             + m.getCodigoDescuento() + ";" + dia + ";" + horario);
-
                 } else if (u instanceof Cocinero) {
                     Cocinero c = (Cocinero) u;
                     String dia = (c.getTurno() != null) ? c.getTurno().getDia() : "";
@@ -85,7 +78,7 @@ public class BoardGameCafe {
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // --- juegos.txt ---
+        // juegos.txt
         try (PrintWriter pw = new PrintWriter(new File(dir, "juegos.txt"))) {
             for (Juego j : juegos.values()) {
                 pw.println(j.getNombre() + ";" + j.getEmpresa() + ";" + j.getAnioPublicacion() + ";"
@@ -94,7 +87,7 @@ public class BoardGameCafe {
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // --- copias.txt ---
+        // copias.txt
         try (PrintWriter pw = new PrintWriter(new File(dir, "copias.txt"))) {
             for (Copia c : copias.values()) {
                 pw.println(c.getId() + ";" + c.getJuego().getNombre() + ";" + c.getEstado() + ";"
@@ -102,9 +95,7 @@ public class BoardGameCafe {
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // --- menu.txt ---
-        // Formato: Bebida;nombre;precio;esAlcoholica;esCaliente
-        //          Pasteleria;nombre;precio;alergeno1,alergeno2  (vacío si no hay)
+        // menu.txt
         try (PrintWriter pw = new PrintWriter(new File(dir, "menu.txt"))) {
             for (ProductoCafeteria p : productosMenu.values()) {
                 if (p instanceof Bebida) {
@@ -119,18 +110,18 @@ public class BoardGameCafe {
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // --- ventas.txt ---
-        // Formato: fecha;loginComprador;subtotal;impuestos;propina;descuento;puntosGenerados
+        // ventas.txt — incluye subtotalCafeteria y subtotalJuegos
+        // Formato: fecha;login;subtotal;impuestos;propina;descuento;puntos;subtotalCafe;subtotalJuegos
         try (PrintWriter pw = new PrintWriter(new File(dir, "ventas.txt"))) {
             for (Venta v : ventas) {
                 pw.println(v.getFecha() + ";" + v.getComprador().getLogin() + ";"
                         + v.getSubtotal() + ";" + v.getImpuestos() + ";"
-                        + v.getPropina() + ";" + v.getDescuentoAplicado() + ";" + v.getPuntosGenerados());
+                        + v.getPropina() + ";" + v.getDescuentoAplicado() + ";" + v.getPuntosGenerados() + ";"
+                        + v.getSubtotalCafeteria() + ";" + v.getSubtotalJuegos());
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // --- prestamos.txt ---
-        // Formato: fechaPrestamo;fechaDevolucion;loginUsuario;idCopia1,idCopia2,...
+        // prestamos.txt
         try (PrintWriter pw = new PrintWriter(new File(dir, "prestamos.txt"))) {
             for (Prestamo p : prestamos) {
                 String copiaIds = "";
@@ -143,9 +134,8 @@ public class BoardGameCafe {
                         + p.getUsuario().getLogin() + ";" + copiaIds);
             }
         } catch (Exception e) { e.printStackTrace(); }
-        
-        // --- reservas.txt ---
-        // Formato: fecha;diaSemana;loginCliente;numMesa;hora
+
+        // reservas.txt
         try (PrintWriter pw = new PrintWriter(new File(dir, "reservas.txt"))) {
             for (Reserva r : reservas) {
                 String login = r.getCliente() != null ? r.getCliente().getLogin() : "";
@@ -154,15 +144,14 @@ public class BoardGameCafe {
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // --- torneos (ya existía, lo mantenemos) ---
         guardarTorneosJSON();
     }
 
     public void cargarDatos() throws Exception {
-        File dir = new File("../datos");
+        File dir = new File("datos");
         if (!dir.exists()) return;
 
-        // --- usuarios.txt ---
+        // usuarios.txt
         File fUsuarios = new File(dir, "usuarios.txt");
         if (fUsuarios.exists()) {
             BufferedReader br = new BufferedReader(new FileReader(fUsuarios));
@@ -170,41 +159,32 @@ public class BoardGameCafe {
             while ((linea = br.readLine()) != null) {
                 if (linea.trim().isEmpty()) continue;
                 String[] p = linea.split(";");
-                String tipo   = p[0];
-                String login  = p[1];
-                String pass   = p[2];
+                String tipo  = p[0];
+                String login = p[1];
+                String pass  = p[2];
                 Usuario u = null;
-
                 if (tipo.equals("Administrador")) {
                     u = new Administrador(login, pass);
-
                 } else if (tipo.equals("Cliente")) {
                     int puntos = (p.length > 3) ? Integer.parseInt(p[3]) : 0;
                     u = new Cliente(login, pass, puntos);
-
                 } else if (tipo.equals("Mesero")) {
                     String codigo = (p.length > 3) ? p[3] : login + "123";
                     Mesero m = new Mesero(login, pass, codigo);
-                    if (p.length > 5 && !p[4].isEmpty()) {
-                        m.setTurno(new Turno(p[4], p[5]));
-                    }
+                    if (p.length > 5 && !p[4].isEmpty()) m.setTurno(new Turno(p[4], p[5]));
                     u = m;
-
                 } else if (tipo.equals("Cocinero")) {
                     String codigo = (p.length > 3) ? p[3] : login + "123";
                     Cocinero c = new Cocinero(login, pass, codigo);
-                    if (p.length > 5 && !p[4].isEmpty()) {
-                        c.setTurno(new Turno(p[4], p[5]));
-                    }
+                    if (p.length > 5 && !p[4].isEmpty()) c.setTurno(new Turno(p[4], p[5]));
                     u = c;
                 }
-
                 if (u != null) usuarios.put(login, u);
             }
             br.close();
         }
 
-        // --- juegos.txt ---
+        // juegos.txt
         File fJuegos = new File(dir, "juegos.txt");
         if (fJuegos.exists()) {
             BufferedReader br = new BufferedReader(new FileReader(fJuegos));
@@ -221,7 +201,7 @@ public class BoardGameCafe {
             br.close();
         }
 
-        // --- copias.txt ---
+        // copias.txt
         File fCopias = new File(dir, "copias.txt");
         if (fCopias.exists()) {
             BufferedReader br = new BufferedReader(new FileReader(fCopias));
@@ -238,7 +218,7 @@ public class BoardGameCafe {
             br.close();
         }
 
-        // --- menu.txt ---
+        // menu.txt
         File fMenu = new File(dir, "menu.txt");
         if (fMenu.exists()) {
             BufferedReader br = new BufferedReader(new FileReader(fMenu));
@@ -252,9 +232,7 @@ public class BoardGameCafe {
                     productosMenu.put(b.getNombre(), b);
                 } else if (p[0].equals("Pasteleria")) {
                     List<String> alergenos = new ArrayList<>();
-                    if (p.length > 3 && !p[3].isEmpty()) {
-                        alergenos = Arrays.asList(p[3].split(","));
-                    }
+                    if (p.length > 3 && !p[3].isEmpty()) alergenos = Arrays.asList(p[3].split(","));
                     Pasteleria pas = new Pasteleria(p[1], Double.parseDouble(p[2]), alergenos);
                     productosMenu.put(pas.getNombre(), pas);
                 }
@@ -262,7 +240,7 @@ public class BoardGameCafe {
             br.close();
         }
 
-        // --- ventas.txt ---
+        // ventas.txt — soporta formato antiguo (7 campos) y nuevo (9 campos)
         File fVentas = new File(dir, "ventas.txt");
         if (fVentas.exists()) {
             BufferedReader br = new BufferedReader(new FileReader(fVentas));
@@ -271,18 +249,19 @@ public class BoardGameCafe {
                 if (linea.trim().isEmpty()) continue;
                 String[] p = linea.split(";");
                 if (p.length >= 7) {
-                    String fecha        = p[0];
-                    String loginComprador = p[1];
-                    double subtotal     = Double.parseDouble(p[2]);
-                    double impuestos    = Double.parseDouble(p[3]);
-                    double propina      = Double.parseDouble(p[4]);
-                    double descuento    = Double.parseDouble(p[5]);
-                    int puntos          = Integer.parseInt(p[6]);
-
-                    Usuario u = usuarios.get(loginComprador);
+                    String fecha    = p[0];
+                    String loginC   = p[1];
+                    double subtotal = Double.parseDouble(p[2]);
+                    double imp      = Double.parseDouble(p[3]);
+                    double prop     = Double.parseDouble(p[4]);
+                    double desc     = Double.parseDouble(p[5]);
+                    int puntos      = Integer.parseInt(p[6]);
+                    double subCafe  = (p.length > 7) ? Double.parseDouble(p[7]) : 0;
+                    double subJuego = (p.length > 8) ? Double.parseDouble(p[8]) : 0;
+                    Usuario u = usuarios.get(loginC);
                     if (u instanceof UsuarioComprador) {
                         Venta v = new Venta(new ArrayList<>(), (UsuarioComprador) u,
-                                impuestos, propina, subtotal, descuento, puntos, fecha);
+                                imp, prop, subtotal, desc, puntos, fecha, subCafe, subJuego);
                         ventas.add(v);
                     }
                 }
@@ -290,7 +269,7 @@ public class BoardGameCafe {
             br.close();
         }
 
-        // --- prestamos.txt ---
+        // prestamos.txt
         File fPrestamos = new File(dir, "prestamos.txt");
         if (fPrestamos.exists()) {
             BufferedReader br = new BufferedReader(new FileReader(fPrestamos));
@@ -299,22 +278,20 @@ public class BoardGameCafe {
                 if (linea.trim().isEmpty()) continue;
                 String[] p = linea.split(";");
                 if (p.length >= 4) {
-                    String fechaPrestamo  = p[0];
-                    String fechaDevolucion = p[1].equals("null") ? null : p[1];
-                    String loginUsuario   = p[2];
-                    String[] copiaIds     = p[3].split(",");
-
-                    Usuario u = usuarios.get(loginUsuario);
+                    String fechaP   = p[0];
+                    String fechaDev = p[1].equals("null") ? null : p[1];
+                    String loginU   = p[2];
+                    String[] ids    = p[3].split(",");
+                    Usuario u = usuarios.get(loginU);
                     if (u instanceof UsuarioComprador) {
-                        List<Copia> copiasPrestamo = new ArrayList<>();
-                        for (String idCopia : copiaIds) {
-                            Copia c = copias.get(idCopia.trim());
-                            if (c != null) copiasPrestamo.add(c);
+                        List<Copia> lista = new ArrayList<>();
+                        for (String id : ids) {
+                            Copia c = copias.get(id.trim());
+                            if (c != null) lista.add(c);
                         }
-                        if (!copiasPrestamo.isEmpty()) {
-                            Prestamo pr = new Prestamo(copiasPrestamo, (UsuarioComprador) u,
-                                    null, fechaPrestamo, null);
-                            pr.setFechaDevolucion(fechaDevolucion);
+                        if (!lista.isEmpty()) {
+                            Prestamo pr = new Prestamo(lista, (UsuarioComprador) u, null, fechaP, null);
+                            pr.setFechaDevolucion(fechaDev);
                             prestamos.add(pr);
                         }
                     }
@@ -323,7 +300,7 @@ public class BoardGameCafe {
             br.close();
         }
 
-        // --- reservas.txt ---
+        // reservas.txt
         File fReservas = new File(dir, "reservas.txt");
         if (fReservas.exists()) {
             BufferedReader br = new BufferedReader(new FileReader(fReservas));
@@ -343,51 +320,40 @@ public class BoardGameCafe {
             br.close();
         }
 
-        // --- torneos (ya existía) ---
         cargarTorneosJSON();
     }
 
     // --------------------------------------------------------
-    // GETTERS Y MÉTODOS DE NEGOCIO (sin cambios)
+    // GETTERS Y MÉTODOS DE NEGOCIO
     // --------------------------------------------------------
 
-    public Map<String, Usuario> getUsuarios()        { return usuarios; }
-    public Map<String, Copia> getCopias()            { return copias; }
-    public Map<String, Juego> getJuegos()            { return juegos; }
-    public Map<String, ProductoCafeteria> getMenu()  { return productosMenu; }
-    public List<Torneo> getTorneos()                 { return torneos; }
-    public List<Venta> getVentas()                   { return ventas; }
-    public List<Prestamo> getPrestamos()             { return prestamos; }
-    public List<Reserva> getReservas()               { return reservas; }
+    public Map<String, Usuario> getUsuarios()            { return usuarios; }
+    public Map<String, Copia> getCopias()                { return copias; }
+    public Map<String, Juego> getJuegos()                { return juegos; }
+    public Map<String, ProductoCafeteria> getMenu()      { return productosMenu; }
+    public List<Torneo> getTorneos()                     { return torneos; }
+    public List<Venta> getVentas()                       { return ventas; }
+    public List<Prestamo> getPrestamos()                 { return prestamos; }
+    public List<Reserva> getReservas()                   { return reservas; }
 
-    public void registrarUsuario(Usuario u)          { usuarios.put(u.getLogin(), u); }
-    public void agregarJuego(Juego j)                { juegos.put(j.getNombre(), j); }
-    public void agregarCopia(Copia c)                { copias.put(c.getId(), c); }
+    public void registrarUsuario(Usuario u)              { usuarios.put(u.getLogin(), u); }
+    public void agregarJuego(Juego j)                    { juegos.put(j.getNombre(), j); }
+    public void agregarCopia(Copia c)                    { copias.put(c.getId(), c); }
     public void agregarProductoMenu(ProductoCafeteria p) { productosMenu.put(p.getNombre(), p); }
-
-    public void crearTorneo(Torneo torneo) {
-        torneos.add(torneo);
-    }
+    public void crearTorneo(Torneo t)                    { torneos.add(t); }
 
     public void inscribirEnTorneo(UsuarioComprador usuario, Torneo torneo, int cupos) throws Exception {
-        if (cupos > 3 || cupos < 1) {
+        if (cupos > 3 || cupos < 1)
             throw new Exception("Solo se pueden inscribir entre 1 y 3 participantes por usuario.");
-        }
         if (usuario instanceof Empleado) {
             Empleado emp = (Empleado) usuario;
-            if (emp.getTurno() != null && emp.getTurno().getDia().equalsIgnoreCase(torneo.getDiaSemana())) {
+            if (emp.getTurno() != null && emp.getTurno().getDia().equalsIgnoreCase(torneo.getDiaSemana()))
                 throw new Exception("Los empleados no pueden inscribirse a torneos si tienen turno el mismo dia.");
-            }
         }
         boolean esFanatico = usuario.getJuegosFavoritos().contains(torneo.getJuego());
-        if (esFanatico) {
-            int fanOcupados = torneo.getCuposFanaticosOcupados();
-            if (fanOcupados + cupos > torneo.getCuposFanaticosTotal()) {
-                esFanatico = false;
-            }
-        }
-        Inscripcion ins = new Inscripcion(usuario, cupos, esFanatico);
-        torneo.inscribir(ins);
+        if (esFanatico && torneo.getCuposFanaticosOcupados() + cupos > torneo.getCuposFanaticosTotal())
+            esFanatico = false;
+        torneo.inscribir(new Inscripcion(usuario, cupos, esFanatico));
     }
 
     public void desinscribirDeTorneo(UsuarioComprador usuario, Torneo torneo) {
@@ -395,44 +361,33 @@ public class BoardGameCafe {
     }
 
     public void realizarPrestamo(UsuarioComprador usuario, Mesa mesa, List<Copia> copiasPedidas, Mesero meseroAcompaniante) throws Exception {
-        if (usuario instanceof Empleado) {
-            Empleado emp = (Empleado) usuario;
-            if (emp.estaEnTurno()) {
-                throw new Exception("Un empleado en turno no puede solicitar prestamos.");
-            }
-        }
-        if (usuario.getPrestamosActuales().size() + copiasPedidas.size() > 2) {
+        if (usuario instanceof Empleado && ((Empleado) usuario).estaEnTurno())
+            throw new Exception("Un empleado en turno no puede solicitar prestamos.");
+        if (usuario.getPrestamosActuales().size() + copiasPedidas.size() > 2)
             throw new Exception("ERROR: Un cliente no puede tener mas de 2 juegos prestados a la vez.");
-        }
         boolean tieneJuegoAccion = false;
         for (Copia c : copiasPedidas) {
             Juego j = c.getJuego();
             if (j.getCategoria().equals("Accion")) tieneJuegoAccion = true;
-            if (!c.isDisponible() || !c.getInventario().equals("Prestamo")) {
+            if (!c.isDisponible() || !c.getInventario().equals("Prestamo"))
                 throw new Exception("ERROR: La copia " + c.getId() + " no esta disponible para prestamo.");
-            }
             if (mesa != null) {
-                if (mesa.getNumPersonas() < j.getMinJugadores() || mesa.getNumPersonas() > j.getMaxJugadores()) {
+                if (mesa.getNumPersonas() < j.getMinJugadores() || mesa.getNumPersonas() > j.getMaxJugadores())
                     throw new Exception("ERROR: Restriccion de numero de jugadores para " + j.getNombre());
-                }
-                if (j.getMinEdad() >= 18 && (mesa.isHayMenores18() || mesa.isHayMenores5())) {
+                if (j.getMinEdad() >= 18 && (mesa.isHayMenores18() || mesa.isHayMenores5()))
                     throw new Exception("ERROR: Juego exclusivo para adultos. Hay menores en la mesa.");
-                }
-                if (j.getMinEdad() > 5 && mesa.isHayMenores5()) {
+                if (j.getMinEdad() > 5 && mesa.isHayMenores5())
                     throw new Exception("ERROR: Juego no apto para menores de 5 anos.");
-                }
             }
             if (j.isEsDificil()) {
-                if (meseroAcompaniante == null) {
-                    System.out.println("ADVERTENCIA: Han pedido un juego dificil sin mesero introductor.");
-                } else if (!meseroAcompaniante.getJuegosQueConoce().contains(j)) {
+                if (meseroAcompaniante == null)
+                    System.out.println("ADVERTENCIA: Juego dificil sin mesero introductor.");
+                else if (!meseroAcompaniante.getJuegosQueConoce().contains(j))
                     System.out.println("ADVERTENCIA: El mesero no conoce el juego.");
-                }
             }
         }
-        if (tieneJuegoAccion && mesa != null) {
+        if (tieneJuegoAccion && mesa != null)
             throw new Exception("No se puede prestar juego de accion con bebidas calientes en la mesa.");
-        }
         Prestamo p = new Prestamo(copiasPedidas, usuario, mesa, new java.util.Date().toString(), meseroAcompaniante);
         for (Copia c : copiasPedidas) {
             c.setDisponible(false);
@@ -442,36 +397,33 @@ public class BoardGameCafe {
     }
 
     public void venderProductos(UsuarioComprador comprador, List<ItemVenta> items, Mesa mesaAtendida) throws Exception {
-        double subtotal = 0;
-        double impuestos = 0;
+        double subtotal = 0, impuestos = 0, subCafe = 0, subJuegos = 0;
         for (ItemVenta item : items) {
             Object obj = item.getItem();
             if (obj instanceof Copia) {
                 Copia c = (Copia) obj;
-                if (!c.getInventario().equals("Venta") || !c.isDisponible()) {
+                if (!c.getInventario().equals("Venta") || !c.isDisponible())
                     throw new Exception("Copia " + c.getId() + " no disponible para venta.");
-                }
                 c.setDisponible(false);
                 subtotal += item.getSubtotal();
                 impuestos += item.getSubtotal() * 0.19;
+                subJuegos += item.getSubtotal();
             } else if (obj instanceof ProductoCafeteria) {
                 ProductoCafeteria p = (ProductoCafeteria) obj;
                 if (p instanceof Bebida) {
                     Bebida b = (Bebida) p;
-                    if (b.isEsAlcoholica() && mesaAtendida != null && (mesaAtendida.isHayMenores18() || mesaAtendida.isHayMenores5())) {
+                    if (b.isEsAlcoholica() && mesaAtendida != null && (mesaAtendida.isHayMenores18() || mesaAtendida.isHayMenores5()))
                         throw new Exception("ERROR: No se puede vender alcohol a mesas con menores.");
-                    }
-                    if (b.isEsCaliente() && tieneMesaJuegoAccion(comprador)) {
+                    if (b.isEsCaliente() && tieneMesaJuegoAccion(comprador))
                         throw new Exception("ERROR: No se pueden despachar bebidas calientes si hay juego de Accion prestado.");
-                    }
                 } else if (p instanceof Pasteleria) {
                     Pasteleria pas = (Pasteleria) p;
-                    if (!pas.getAlergenos().isEmpty()) {
-                        System.out.println("ATENCION INFO ALERGENOS: " + String.join(", ", pas.getAlergenos()));
-                    }
+                    if (!pas.getAlergenos().isEmpty())
+                        System.out.println("ATENCION ALERGENOS: " + String.join(", ", pas.getAlergenos()));
                 }
                 subtotal += item.getSubtotal();
                 impuestos += item.getSubtotal() * 0.08;
+                subCafe += item.getSubtotal();
             }
         }
         double descuento = 0;
@@ -483,26 +435,23 @@ public class BoardGameCafe {
             cl.restarPuntosFidelidad((int) descuento);
         }
         double propina = subtotal * 0.10;
-        int puntosGenerados = (int) ((subtotal + impuestos + propina - descuento) * 0.01);
-        if (comprador instanceof Cliente) {
-            ((Cliente) comprador).agregarPuntosFidelidad(puntosGenerados);
-        }
-        Venta v = new Venta(items, comprador, impuestos, propina, subtotal, descuento, puntosGenerados, new java.util.Date().toString());
+        int puntos = (int) ((subtotal + impuestos + propina - descuento) * 0.01);
+        if (comprador instanceof Cliente) ((Cliente) comprador).agregarPuntosFidelidad(puntos);
+        Venta v = new Venta(items, comprador, impuestos, propina, subtotal, descuento, puntos,
+                new java.util.Date().toString(), subCafe, subJuegos);
         comprador.registrarCompra(v);
         ventas.add(v);
     }
 
     private boolean tieneMesaJuegoAccion(UsuarioComprador u) {
-        for (Copia c : u.getPrestamosActuales()) {
+        for (Copia c : u.getPrestamosActuales())
             if (c.getJuego().getCategoria().equals("Accion")) return true;
-        }
         return false;
     }
 
     public void cambiarTurno(SolicitudCambioTurno solicitud, Administrador admin) throws Exception {
-        if (!cumpleMinimoPersonal()) {
+        if (!cumpleMinimoPersonal())
             throw new Exception("No se puede aprobar el cambio de turno. No se cumple el minimo de empleados.");
-        }
         solicitud.aprobar();
         if (solicitud.getReemplazo() != null) {
             Turno temp = solicitud.getSolicitante().getTurno();
@@ -512,8 +461,7 @@ public class BoardGameCafe {
     }
 
     private boolean cumpleMinimoPersonal() {
-        int cocineros = 0;
-        int meseros = 0;
+        int cocineros = 0, meseros = 0;
         for (Usuario u : usuarios.values()) {
             if (u instanceof Cocinero) cocineros++;
             if (u instanceof Mesero) meseros++;
@@ -522,129 +470,126 @@ public class BoardGameCafe {
     }
 
     // --------------------------------------------------------
-    // MÉTODOS PARA ESTADÍSTICAS Y GRÁFICOS
+    // MÉTODOS PARA GRÁFICAS — DATOS REALES
     // --------------------------------------------------------
 
     public Map<String, Integer> getDistribucionCopias(String nombreJuego) {
         Map<String, Integer> dist = new HashMap<>();
         dist.put("Prestamo", 0);
         dist.put("Inventario", 0);
-        
         for (Copia c : copias.values()) {
             if (c.getJuego().getNombre().equals(nombreJuego)) {
-                if (c.getInventario().equals("Prestamo")) {
+                if (c.getInventario().equals("Prestamo"))
                     dist.put("Prestamo", dist.get("Prestamo") + 1);
-                } else if (c.getInventario().equals("Venta") || c.getInventario().equals("Inventario")) {
+                else if (c.getInventario().equals("Venta"))
                     dist.put("Inventario", dist.get("Inventario") + 1);
-                }
             }
         }
         return dist;
     }
 
+    /**
+     * Retorna ventas reales del sistema discriminadas por tipo (Cafeteria / Juegos)
+     * para una fecha dada. Usa los subtotales almacenados en cada Venta.
+     */
     public Map<String, Double> getVentasPorFechaYTipo(String fecha) {
-        Map<String, Double> ventasPorTipo = new HashMap<>();
-        ventasPorTipo.put("Cafeteria", 0.0);
-        ventasPorTipo.put("Juegos", 0.0);
-
-        // Como ventas.txt no guarda los items individuales, proveemos datos fijos 
-        // para las fechas de demostración que coinciden con la rúbrica/capturas
-        if (fecha.contains("11/05/2026")) {
-            ventasPorTipo.put("Cafeteria", 10000.0);
-            ventasPorTipo.put("Juegos", 20000.0);
-        } else if (fecha.contains("12/05/2026")) {
-            ventasPorTipo.put("Cafeteria", 10000.0);
-            ventasPorTipo.put("Juegos", 60000.0);
-        } else if (fecha.contains("13/05/2026")) {
-            ventasPorTipo.put("Cafeteria", 30000.0);
-            ventasPorTipo.put("Juegos", 60000.0);
-        } else if (fecha.contains("14/05/2026")) {
-            ventasPorTipo.put("Cafeteria", 50000.0);
-            ventasPorTipo.put("Juegos", 40000.0);
-        } else if (fecha.contains("15/05/2026")) {
-            ventasPorTipo.put("Cafeteria", 50000.0);
-            ventasPorTipo.put("Juegos", 80000.0);
+        Map<String, Double> resultado = new HashMap<>();
+        resultado.put("Cafeteria", 0.0);
+        resultado.put("Juegos", 0.0);
+        for (Venta v : ventas) {
+            if (v.getFecha().contains(fecha)) {
+                resultado.put("Cafeteria", resultado.get("Cafeteria") + v.getSubtotalCafeteria());
+                resultado.put("Juegos",    resultado.get("Juegos")    + v.getSubtotalJuegos());
+            }
         }
-
-        return ventasPorTipo;
+        return resultado;
     }
 
     public Map<String, Integer> getReservasPorSemana(String inicioSemana, String finSemana) {
-        // En una app real filtraríamos por el rango. Para el proyecto 3 lo agrupamos por dia de la semana
         Map<String, Integer> res = new LinkedHashMap<>();
         String[] dias = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
         for (String d : dias) res.put(d, 0);
 
         for (Reserva r : reservas) {
-            // Se asume que el diaSemana coincide con alguno del arreglo o se adapta
+            // Filtrar por rango de fechas si se especifica
+            if (inicioSemana != null && finSemana != null) {
+                if (!fechaEnRango(r.getFecha(), inicioSemana, finSemana)) continue;
+            }
             String d = r.getDiaSemana();
-            // Normalizar dia
             if (d.equalsIgnoreCase("Miercoles")) d = "Miércoles";
-            if (d.equalsIgnoreCase("Sabado")) d = "Sábado";
-            
+            if (d.equalsIgnoreCase("Sabado"))    d = "Sábado";
             for (String key : res.keySet()) {
                 if (key.equalsIgnoreCase(d)) {
                     res.put(key, res.get(key) + 1);
+                    break;
                 }
             }
         }
         return res;
     }
 
+    private boolean fechaEnRango(String fecha, String inicio, String fin) {
+        // Formato dd/MM/yyyy — convertir a yyyyMMdd para comparar como String
+        try {
+            String f = fecha.substring(6) + fecha.substring(3,5) + fecha.substring(0,2);
+            String i = inicio.substring(6) + inicio.substring(3,5) + inicio.substring(0,2);
+            String fi = fin.substring(6) + fin.substring(3,5) + fin.substring(0,2);
+            return f.compareTo(i) >= 0 && f.compareTo(fi) <= 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     // --------------------------------------------------------
-    // PERSISTENCIA DE TORNEOS EN JSON (sin cambios)
+    // PERSISTENCIA DE TORNEOS EN JSON
     // --------------------------------------------------------
 
     public void guardarTorneosJSON() {
         try {
-            File dir = new File("../datos");
+            File dir = new File("datos");
             if (!dir.exists()) dir.mkdirs();
             JSONObject root = new JSONObject();
             JSONArray arrTorneos = new JSONArray();
             for (Torneo t : torneos) {
-                JSONObject objTorneo = new JSONObject();
-                objTorneo.put("nombre", t.getNombre());
-                objTorneo.put("juego", t.getJuego().getNombre());
-                objTorneo.put("diaSemana", t.getDiaSemana());
-                objTorneo.put("maxParticipantes", t.getMaxParticipantes());
+                JSONObject obj = new JSONObject();
+                obj.put("nombre", t.getNombre());
+                obj.put("juego", t.getJuego().getNombre());
+                obj.put("diaSemana", t.getDiaSemana());
+                obj.put("maxParticipantes", t.getMaxParticipantes());
                 if (t instanceof TorneoAmistoso) {
-                    objTorneo.put("tipo", "Amistoso");
+                    obj.put("tipo", "Amistoso");
                 } else if (t instanceof TorneoCompetitivo) {
-                    objTorneo.put("tipo", "Competitivo");
-                    objTorneo.put("tarifaEntrada", ((TorneoCompetitivo) t).getTarifaEntrada());
+                    obj.put("tipo", "Competitivo");
+                    obj.put("tarifaEntrada", ((TorneoCompetitivo) t).getTarifaEntrada());
                 }
-                JSONArray arrInscripciones = new JSONArray();
+                JSONArray arrIns = new JSONArray();
                 for (Inscripcion ins : t.getInscripciones()) {
-                    JSONObject objIns = new JSONObject();
-                    objIns.put("usuario", ins.getUsuario().getLogin());
-                    objIns.put("cantidadCupos", ins.getCantidadCupos());
-                    objIns.put("esFanatico", ins.isFanatico());
-                    arrInscripciones.put(objIns);
+                    JSONObject o = new JSONObject();
+                    o.put("usuario", ins.getUsuario().getLogin());
+                    o.put("cantidadCupos", ins.getCantidadCupos());
+                    o.put("esFanatico", ins.isFanatico());
+                    arrIns.put(o);
                 }
-                objTorneo.put("inscripciones", arrInscripciones);
-                arrTorneos.put(objTorneo);
+                obj.put("inscripciones", arrIns);
+                arrTorneos.put(obj);
             }
             root.put("torneos", arrTorneos);
-            JSONArray arrUsuarios = new JSONArray();
+            JSONArray arrU = new JSONArray();
             for (Usuario u : usuarios.values()) {
                 if (u instanceof UsuarioComprador) {
                     UsuarioComprador uc = (UsuarioComprador) u;
-                    JSONObject objU = new JSONObject();
-                    objU.put("login", uc.getLogin());
-                    JSONArray arrJuegosFav = new JSONArray();
-                    for (Juego j : uc.getJuegosFavoritos()) {
-                        arrJuegosFav.put(j.getNombre());
-                    }
-                    objU.put("juegosFavoritos", arrJuegosFav);
-                    JSONArray arrBonos = new JSONArray();
-                    for (Double bono : uc.getBonosDescuento()) {
-                        arrBonos.put(bono);
-                    }
-                    objU.put("bonosDescuento", arrBonos);
-                    arrUsuarios.put(objU);
+                    JSONObject o = new JSONObject();
+                    o.put("login", uc.getLogin());
+                    JSONArray fav = new JSONArray();
+                    for (Juego j : uc.getJuegosFavoritos()) fav.put(j.getNombre());
+                    o.put("juegosFavoritos", fav);
+                    JSONArray bonos = new JSONArray();
+                    for (Double b : uc.getBonosDescuento()) bonos.put(b);
+                    o.put("bonosDescuento", bonos);
+                    arrU.put(o);
                 }
             }
-            root.put("usuariosExtra", arrUsuarios);
+            root.put("usuariosExtra", arrU);
             try (PrintWriter pw = new PrintWriter(new File(dir, "estado_nuevo.json"))) {
                 pw.write(root.toString(4));
             }
@@ -653,59 +598,47 @@ public class BoardGameCafe {
 
     public void cargarTorneosJSON() {
         try {
-            File f = new File("../datos/estado_nuevo.json");
+            File f = new File("datos/estado_nuevo.json");
             if (!f.exists()) return;
             String content = new String(java.nio.file.Files.readAllBytes(f.toPath()));
             JSONObject root = new JSONObject(content);
             if (root.has("usuariosExtra")) {
-                JSONArray arrUsuarios = root.getJSONArray("usuariosExtra");
-                for (int i = 0; i < arrUsuarios.length(); i++) {
-                    JSONObject objU = arrUsuarios.getJSONObject(i);
-                    String login = objU.getString("login");
-                    Usuario u = usuarios.get(login);
+                JSONArray arr = root.getJSONArray("usuariosExtra");
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject o = arr.getJSONObject(i);
+                    Usuario u = usuarios.get(o.getString("login"));
                     if (u instanceof UsuarioComprador) {
                         UsuarioComprador uc = (UsuarioComprador) u;
-                        JSONArray arrJuegosFav = objU.getJSONArray("juegosFavoritos");
-                        for (int j = 0; j < arrJuegosFav.length(); j++) {
-                            Juego juego = juegos.get(arrJuegosFav.getString(j));
-                            if (juego != null) uc.agregarJuegoFavorito(juego);
+                        JSONArray fav = o.getJSONArray("juegosFavoritos");
+                        for (int j = 0; j < fav.length(); j++) {
+                            Juego jg = juegos.get(fav.getString(j));
+                            if (jg != null) uc.agregarJuegoFavorito(jg);
                         }
-                        JSONArray arrBonos = objU.getJSONArray("bonosDescuento");
-                        for (int j = 0; j < arrBonos.length(); j++) {
-                            uc.agregarBonoDescuento(arrBonos.getDouble(j));
-                        }
+                        JSONArray bonos = o.getJSONArray("bonosDescuento");
+                        for (int j = 0; j < bonos.length(); j++) uc.agregarBonoDescuento(bonos.getDouble(j));
                     }
                 }
             }
             if (root.has("torneos")) {
-                JSONArray arrTorneos = root.getJSONArray("torneos");
-                for (int i = 0; i < arrTorneos.length(); i++) {
-                    JSONObject objTorneo = arrTorneos.getJSONObject(i);
-                    String nombre = objTorneo.getString("nombre");
-                    Juego juego = juegos.get(objTorneo.getString("juego"));
+                JSONArray arr = root.getJSONArray("torneos");
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject o = arr.getJSONObject(i);
+                    Juego juego = juegos.get(o.getString("juego"));
                     if (juego == null) continue;
-                    String diaSemana = objTorneo.getString("diaSemana");
-                    int maxParticipantes = objTorneo.getInt("maxParticipantes");
-                    String tipo = objTorneo.getString("tipo");
-                    Torneo torneo = null;
-                    if (tipo.equals("Amistoso")) {
-                        torneo = new TorneoAmistoso(nombre, juego, diaSemana, maxParticipantes);
-                    } else if (tipo.equals("Competitivo")) {
-                        double tarifaEntrada = objTorneo.getDouble("tarifaEntrada");
-                        torneo = new TorneoCompetitivo(nombre, juego, diaSemana, maxParticipantes, tarifaEntrada);
-                    }
-                    if (torneo != null) {
-                        JSONArray arrInscripciones = objTorneo.getJSONArray("inscripciones");
-                        for (int j = 0; j < arrInscripciones.length(); j++) {
-                            JSONObject objIns = arrInscripciones.getJSONObject(j);
-                            Usuario u = usuarios.get(objIns.getString("usuario"));
-                            if (u instanceof UsuarioComprador) {
-                                Inscripcion ins = new Inscripcion((UsuarioComprador) u,
-                                        objIns.getInt("cantidadCupos"), objIns.getBoolean("esFanatico"));
-                                torneo.inscribir(ins);
-                            }
+                    Torneo t = null;
+                    if (o.getString("tipo").equals("Amistoso"))
+                        t = new TorneoAmistoso(o.getString("nombre"), juego, o.getString("diaSemana"), o.getInt("maxParticipantes"));
+                    else if (o.getString("tipo").equals("Competitivo"))
+                        t = new TorneoCompetitivo(o.getString("nombre"), juego, o.getString("diaSemana"), o.getInt("maxParticipantes"), o.getDouble("tarifaEntrada"));
+                    if (t != null) {
+                        JSONArray ins = o.getJSONArray("inscripciones");
+                        for (int j = 0; j < ins.length(); j++) {
+                            JSONObject oi = ins.getJSONObject(j);
+                            Usuario u = usuarios.get(oi.getString("usuario"));
+                            if (u instanceof UsuarioComprador)
+                                t.inscribir(new Inscripcion((UsuarioComprador) u, oi.getInt("cantidadCupos"), oi.getBoolean("esFanatico")));
                         }
-                        torneos.add(torneo);
+                        torneos.add(t);
                     }
                 }
             }

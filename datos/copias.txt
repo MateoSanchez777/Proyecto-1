@@ -1,10 +1,11 @@
-C1;Catan;Excelente;Exhibición;true
-C2;Catan;Bueno;Bodega;true
-C3;Catan;Dañado;Mantenimiento;false
-T1;Ticket to Ride;Excelente;Exhibición;true
-T2;Ticket to Ride;Excelente;Bodega;true
-T3;Ticket to Ride;Excelente;Bodega;true
-T4;Ticket to Ride;Excelente;Bodega;true
-P1;Pandemic;Bueno;Exhibición;true
-P2;Pandemic;Excelente;Bodega;true
-P3;Pandemic;Malo;Mantenimiento;false
+C3;Catan;Bueno;Prestamo;true
+T4;Ticket to Ride;Bueno;Venta;true
+C4;Catan;Bueno;Venta;true
+P1;Pandemic;Bueno;Prestamo;true
+P2;Pandemic;Bueno;Prestamo;true
+P3;Pandemic;Bueno;Venta;true
+T1;Ticket to Ride;Bueno;Prestamo;true
+C1;Catan;Bueno;Prestamo;true
+T2;Ticket to Ride;Bueno;Venta;true
+C2;Catan;Bueno;Prestamo;true
+T3;Ticket to Ride;Bueno;Venta;true

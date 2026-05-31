@@ -82,12 +82,14 @@ public class PanelEvolucion extends JPanel {
     
     private void actualizarGrafico() {
         String seleccionado = (String) comboSemanas.getSelectedItem();
+        // Extraer fecha inicio y fin del string "dd/MM/yyyy - dd/MM/yyyy"
+        String[] partes = seleccionado.split(" - ");
+        String inicio = partes[0].trim();
+        String fin    = partes[1].trim();
         String titulo = "Reservas " + seleccionado;
-        if (seleccionado.startsWith("11/05")) {
-            titulo = "Reservas Semana 15";
-        }
-        
-        Map<String, Integer> datos = cafe.getReservasPorSemana(null, null);
+        if (seleccionado.startsWith("11/05")) titulo = "Reservas Semana 15";
+        if (seleccionado.startsWith("18/05")) titulo = "Reservas Semana 16";
+        Map<String, Integer> datos = cafe.getReservasPorSemana(inicio, fin);
         grafico.setDatos(datos, titulo);
     }
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="Entrega 2/src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="Entrega 2/lib/json.jar"/>
+	<classpathentry kind="lib" path="Entrega 2/lib/junit-platform-console-standalone.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

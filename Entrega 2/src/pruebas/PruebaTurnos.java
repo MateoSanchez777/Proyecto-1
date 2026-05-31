@@ -1,55 +1,79 @@
 package pruebas;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
 
 import logica.BoardGameCafe;
-import modelo.usuarios.Cocinero;
+import modelo.turnos.SolicitudCambioTurno;
 import modelo.turnos.Turno;
+import modelo.usuarios.Administrador;
+import modelo.usuarios.Cocinero;
+import modelo.usuarios.Mesero;
 
-class PruebaTurnos {
+public class PruebaTurnos {
 
     private BoardGameCafe cafe;
-    private Cocinero cocinero;
+    private Administrador admin;
+    private Mesero m1, m2;
+    private Cocinero c1;
 
-    @BeforeEach
-    void setUp() throws Exception {
-        cafe = new BoardGameCafe();
-        cocinero = new Cocinero("juan", "juan123", "DESC123");
-        cafe.registrarUsuario(cocinero);
+    @Before
+    public void setUp() {
+        cafe  = new BoardGameCafe();
+        admin = new Administrador("admin", "admin123");
+        m1 = new Mesero("m1", "1", "A");
+        m2 = new Mesero("m2", "1", "B");
+        c1 = new Cocinero("c1", "1", "C");
+        m1.setTurno(new Turno("Lunes", "Mañana"));
+        m2.setTurno(new Turno("Lunes", "Noche"));
+        cafe.registrarUsuario(m1);
+        cafe.registrarUsuario(m2);
+        cafe.registrarUsuario(c1);
+        cafe.registrarUsuario(admin);
     }
 
     @Test
-    void testAsignarTurno() {
-        Turno turno = new Turno("Lunes", "Mañana");
-        cocinero.setTurno(turno);
-        
-        assertNotNull(cocinero.getTurno(), "El cocinero debería tener 1 turno.");
-        assertEquals("Lunes", cocinero.getTurno().getDia(), "El día del turno debería ser Lunes.");
+    public void testTurnosOriginalesCorrectos() {
+        assertEquals("Mañana", m1.getTurno().getHorario());
+        assertEquals("Noche",  m2.getTurno().getHorario());
     }
 
     @Test
-    void testRechazarTurnoCruce() {
-        Turno turno1 = new Turno("Lunes", "Mañana");
-        cocinero.setTurno(turno1);
-        
-        // Intentar reemplazar el turno (en esta implementación simple se sobreescribe)
-        Turno turno2 = new Turno("Lunes", "Tarde");
-        boolean exito = false;
+    public void testCambioTurnoExitoso() throws Exception {
+        SolicitudCambioTurno sol = new SolicitudCambioTurno(m1, m2, "12/05");
+        cafe.cambiarTurno(sol, admin);
+        assertEquals("Los turnos deben intercambiarse", "Noche",   m1.getTurno().getHorario());
+        assertEquals("Los turnos deben intercambiarse", "Mañana",  m2.getTurno().getHorario());
+    }
+
+    @Test
+    public void testCambioTurnoFallaSinMinimoMeseros() {
+        // Café con solo 1 mesero registrado — no cumple mínimo de 2
+        BoardGameCafe cafeChico = new BoardGameCafe();
+        Mesero soloMesero = new Mesero("m3", "1", "D");
+        Mesero reemplazo  = new Mesero("m4", "1", "E");
+        soloMesero.setTurno(new Turno("Martes", "Tarde"));
+        reemplazo.setTurno(new Turno("Martes", "Noche"));
+        cafeChico.registrarUsuario(soloMesero);
+        cafeChico.registrarUsuario(new Cocinero("c2", "1", "F"));
+
+        SolicitudCambioTurno sol = new SolicitudCambioTurno(soloMesero, reemplazo, "13/05");
         try {
-            cocinero.setTurno(turno2);
-            exito = true;
+            cafeChico.cambiarTurno(sol, admin);
+            fail("Deberia lanzar excepcion: minimo de personal no cumplido");
         } catch (Exception e) {
-            exito = false;
+            assertTrue(e.getMessage().toLowerCase().contains("minimo") ||
+                       e.getMessage().toLowerCase().contains("personal"));
         }
-        assertTrue(exito, "La asignación debe permitirse o manejarse según la lógica del modelo.");
-        assertNotNull(cocinero.getTurno());
-        assertEquals("Tarde", cocinero.getTurno().getHorario());
     }
 
+    @Test
+    public void testAsignarTurnoAEmpleado() {
+        Turno t = new Turno("Viernes", "Tarde");
+        m1.setTurno(t);
+        assertNotNull(m1.getTurno());
+        assertEquals("Viernes", m1.getTurno().getDia());
+        assertEquals("Tarde",   m1.getTurno().getHorario());
+    }
 }

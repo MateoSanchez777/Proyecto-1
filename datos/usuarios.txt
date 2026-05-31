@@ -1,3 +1,9 @@
+Cliente;carlos;pass789;0
+Cocinero;cocinero2;coc456;COC002;Viernes;Tarde
+Cocinero;cocinero1;coc123;COC001;Lunes;Mañana
 Administrador;admin;admin123
-Mesero;m2;123
-Cliente;andres;123
+Cliente;juan;pass123;150
+Cliente;andres;andres123;200
+Cliente;maria;pass456;80
+Mesero;mesero1;mes123;MES001;Lunes;Mañana
+Mesero;mesero2;mes456;MES002;Miercoles;Tarde
