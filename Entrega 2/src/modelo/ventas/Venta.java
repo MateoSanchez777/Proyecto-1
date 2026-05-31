@@ -30,6 +30,7 @@ public class Venta {
     public double getImpuestos() { return impuestos; }
     public double getPropina() { return propina; }
     public double getTotalParcial() { return totalParcial; }
+    public double getSubtotal() { return totalParcial; } // Alias for persistence compatibility
     public double getDescuentoAplicado() { return descuentoAplicado; }
     public double getTotalFinal() {
         return totalParcial + impuestos + propina - descuentoAplicado;

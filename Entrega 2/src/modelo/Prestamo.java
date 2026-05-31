@@ -23,10 +23,12 @@ public class Prestamo {
     }
 
     public List<Copia> getCopiasPrestadas() { return copiasPrestadas; }
+    public List<Copia> getCopias() { return copiasPrestadas; } // Alias for backward compatibility
     public UsuarioComprador getUsuario() { return usuario; }
     public Mesa getMesa() { return mesa; }
     public String getFechaPrestamo() { return fechaPrestamo; }
     public String getFechaDevolucion() { return fechaDevolucion; }
+    public void setFechaDevolucion(String fechaDevolucion) { this.fechaDevolucion = fechaDevolucion; }
     public Mesero getMeseroIntroductor() { return meseroIntroductor; }
 
     public void finalizarPrestamo(String fechaDevolucion) throws Exception {
@@ -41,7 +43,4 @@ public class Prestamo {
             usuario.removerPrestamo(copia);
         }
     }
-
 }
-    
-    

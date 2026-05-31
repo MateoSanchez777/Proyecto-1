@@ -1,0 +1,3 @@
+Catan;Devir;1995;3;4;10;Estrategia;false;150000.0
+Ticket to Ride;Days of Wonder;2004;2;5;8;Familiar;false;180000.0
+Pandemic;Z-Man;2008;2;4;8;Cooperativo;true;140000.0

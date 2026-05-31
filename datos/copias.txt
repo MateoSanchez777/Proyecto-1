@@ -1,5 +1,10 @@
-C3;Cards A.H.;Bueno;Prestamo;true
-C4;UNO Attack;Nuevo;Prestamo;true
-C5;Catan;Nuevo;Prestamo;true
-C1;Catan;Nuevo;Prestamo;false
-C2;Twilight Imperium;Bueno;Prestamo;false
+C1;Catan;Excelente;Exhibición;true
+C2;Catan;Bueno;Bodega;true
+C3;Catan;Dañado;Mantenimiento;false
+T1;Ticket to Ride;Excelente;Exhibición;true
+T2;Ticket to Ride;Excelente;Bodega;true
+T3;Ticket to Ride;Excelente;Bodega;true
+T4;Ticket to Ride;Excelente;Bodega;true
+P1;Pandemic;Bueno;Exhibición;true
+P2;Pandemic;Excelente;Bodega;true
+P3;Pandemic;Malo;Mantenimiento;false
