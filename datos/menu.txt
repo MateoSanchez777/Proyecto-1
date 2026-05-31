@@ -1,0 +1,9 @@
+Bebida;Cafe;5000.0;false;true
+Bebida;Cerveza;8000.0;true;false
+Bebida;Jugo de naranja;6000.0;false;false
+Bebida;Agua;3000.0;false;false
+Bebida;Te caliente;4500.0;false;true
+Pasteleria;Brownie;7000.0;nueces,gluten
+Pasteleria;Cheesecake;9000.0;lacteos,gluten
+Pasteleria;Muffin de arandanos;6500.0;gluten
+Pasteleria;Macarron;5500.0;

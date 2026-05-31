@@ -1,44 +1,94 @@
 package pruebas;
 
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import logica.BoardGameCafe;
-import modelo.juegos.Juego;
+import modelo.Mesa;
+import modelo.cafeteria.Bebida;
+import modelo.cafeteria.Pasteleria;
 import modelo.juegos.Copia;
-import modelo.usuarios.Empleado;
-import modelo.usuarios.Mesero;
-import modelo.ventas.ItemVenta;
+import modelo.juegos.Juego;
 import modelo.usuarios.Cliente;
+import modelo.ventas.ItemVenta;
 
-public class PruebaVentaJuegos {
-    public static void main(String[] args) {
-        System.out.println("--- PRUEBA VENTAS JUEGOS ---");
-        BoardGameCafe cafe = new BoardGameCafe();
-        
-        Empleado emp = new Mesero("emp1", "pass", "DESC20");
-        Cliente cliente = new Cliente("cli1", "pass", 100); // 100 pesos de puntos
-        
-        Juego j1 = new Juego("Uno", "Mattel", 2000, 2, 10, 5, "Cartas", false, 20000);
-        Copia c1 = new Copia("U1", j1, "Nuevo", "Venta", true);
-        Copia c2 = new Copia("U2", j1, "Nuevo", "Venta", true);
-        
+public class PruebaVentaCafeteria {
+
+    private BoardGameCafe cafe;
+    private Cliente usr1;
+    private Mesa mesaMenores;
+    private Bebida cerveza, teCaliente;
+    private Pasteleria brownie;
+
+    @Before
+    public void setUp() {
+        cafe = new BoardGameCafe();
+        usr1 = new Cliente("juan", "123", 0);
+        mesaMenores = new Mesa(1, 3, false, true);
+
+        cerveza    = new Bebida("Cerveza", 5000, true, false);
+        teCaliente = new Bebida("Te Caliente", 3000, false, true);
+
+        List<String> alergenos = new ArrayList<>();
+        alergenos.add("Mani");
+        brownie = new Pasteleria("Brownie", 4500, alergenos);
+    }
+
+    @Test
+    public void testVentaNormalConAlergeno() throws Exception {
+        List<ItemVenta> items = new ArrayList<>();
+        items.add(new ItemVenta(brownie, brownie.getPrecio(), 2));
+        cafe.venderProductos(usr1, items, mesaMenores);
+
+        assertEquals("Debe registrarse 1 venta", 1, cafe.getVentas().size());
+        assertTrue("El total debe ser positivo", cafe.getVentas().get(0).getTotalFinal() > 0);
+    }
+
+    @Test
+    public void testAlcoholBlockeadoPorMenoresEnMesa() {
+        List<ItemVenta> itemsAlc = new ArrayList<>();
+        itemsAlc.add(new ItemVenta(cerveza, cerveza.getPrecio(), 1));
+
         try {
-            System.out.println("1. Empleado comprando (Con descuento interno de Empleado)");
-            List<ItemVenta> citems1 = new ArrayList<>();
-            citems1.add(new ItemVenta(c1, j1.getPrecioVenta(), 1));
-            cafe.venderProductos(emp, citems1, null);
-            System.out.println("OK: Venta a empleado. Impuestos(19%) y Descuento del 20% aplicado.");
-            System.out.println("Total: " + cafe.getVentas().get(0).getTotalFinal());
-            
-            System.out.println("\n2. Cliente usando puntos de fidelidad para comprar");
-            List<ItemVenta> citems2 = new ArrayList<>();
-            citems2.add(new ItemVenta(c2, j1.getPrecioVenta(), 1));
-            cafe.venderProductos(cliente, citems2, null);
-            System.out.println("OK: Descuento de fidelidad (100) aplicado.");
-            System.out.println("Total al Cliente: " + cafe.getVentas().get(1).getTotalFinal());
-            System.out.println("Puntos fidelidad restantes (tras ganar los nuevos 1%): " + cliente.getPuntosFidelidad());
-            
-        } catch (Exception e) { System.out.println(e.getMessage()); }
+            cafe.venderProductos(usr1, itemsAlc, mesaMenores);
+            fail("Deberia lanzar excepcion: no se puede vender alcohol a mesa con menores");
+        } catch (Exception e) {
+            assertTrue("El mensaje debe mencionar menores o alcohol",
+                    e.getMessage().toLowerCase().contains("menores") ||
+                    e.getMessage().toLowerCase().contains("alcohol"));
+        }
+    }
+
+    @Test
+    public void testBebidaCalienteBlockeadaPorJuegoAccion() {
+        // Simulamos directamente que el usuario tiene un juego de accion prestado
+        Juego jAccion = new Juego("Twister", "Hasbro", 2000, 2, 4, 5, "Accion", false, 40000);
+        Copia cTwister = new Copia("T1", jAccion, "Nuevo", "Prestamo", false);
+        usr1.agregarPrestamo(cTwister);
+
+        List<ItemVenta> itemsCaliente = new ArrayList<>();
+        itemsCaliente.add(new ItemVenta(teCaliente, teCaliente.getPrecio(), 1));
+
+        try {
+            cafe.venderProductos(usr1, itemsCaliente, new Mesa(2, 2, false, false));
+            fail("Deberia lanzar excepcion: bebida caliente con juego de accion activo");
+        } catch (Exception e) {
+            assertTrue("El mensaje debe mencionar Accion o caliente",
+                    e.getMessage().contains("Accion") || e.getMessage().contains("caliente"));
+        }
+    }
+
+    @Test
+    public void testVentaExitosaGeneraPuntosCliente() throws Exception {
+        List<ItemVenta> items = new ArrayList<>();
+        items.add(new ItemVenta(brownie, brownie.getPrecio(), 1));
+        cafe.venderProductos(usr1, items, mesaMenores);
+
+        assertTrue("La venta exitosa debe generar puntos de fidelidad",
+                usr1.getPuntosFidelidad() > 0);
     }
 }

@@ -1,2 +1,3 @@
+Administrador;admin;admin123
 Mesero;m2;123
 Cliente;andres;123
